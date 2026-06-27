@@ -1,0 +1,7 @@
+credentials.json
+service-account.json
+service-account_old.json
+.venv/
+__pycache__/
+token.pickle
+
