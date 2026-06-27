@@ -5,7 +5,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 # MoviePy v2.0+ Imports
-from moviepy import CompositeVideoClip, ImageClip, AudioFileClip, CompositeAudioClip,VideoFileClip
+from moviepy import ColorClip, CompositeVideoClip, ImageClip, AudioFileClip, CompositeAudioClip,VideoFileClip
 from moviepy.audio.fx.AudioLoop import AudioLoop
 from moviepy.audio.fx.MultiplyVolume import MultiplyVolume
 import video
@@ -52,7 +52,7 @@ class VideoEffects:
         
         # Starts at 1.10, scales down to 1.0. 
         # The max() clamp ensures we never shrink below the canvas size and get black borders.
-        zoom_factor = max(1.0, 1.10 - 0.10 * (t / duration))
+        zoom_factor = max(1.0, 1.30 - 0.30 * (t / duration))
         
         new_w = math.ceil(base_w * zoom_factor)
         new_h = math.ceil(base_h * zoom_factor)
@@ -160,12 +160,13 @@ class VG:
        
              # Convert the raw un-cropped image into a MoviePy clip
         img_clip = ImageClip(np.array(img)).with_duration(duration)
-        
+        bg_clip = ColorClip(size=(crop_w, crop_h), color=(50, 50, 50)).with_duration(duration)
+
         # Center the complete image inside your canvas frame (extra space allowed)
         centered_img = img_clip.with_position("center")
        
         # Create a final composite clip with the required canvas dimensions
-        clip = CompositeVideoClip([centered_img], size=(crop_w, crop_h)).with_duration(duration)
+        clip = CompositeVideoClip([bg_clip, centered_img], size=(crop_w, crop_h)).with_duration(duration)
         
         print(f"Image pre-processed to {crop_w}x{crop_h} for target ratio {ratio[0]}:{ratio[1]}.")
         # 2. Apply Visual Effects
