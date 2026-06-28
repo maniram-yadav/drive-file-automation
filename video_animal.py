@@ -1,11 +1,12 @@
 import os
 import math
+import random 
 from typing import Callable, Dict
 import numpy as np
 from PIL import Image, ImageOps
 
 # MoviePy v2.0+ Imports
-from moviepy import ColorClip, CompositeVideoClip, ImageClip, AudioFileClip, CompositeAudioClip,VideoFileClip
+from moviepy import ColorClip, CompositeVideoClip, ImageClip, AudioFileClip, CompositeAudioClip, TextClip,VideoFileClip
 from moviepy.audio.fx.AudioLoop import AudioLoop
 from moviepy.audio.fx.MultiplyVolume import MultiplyVolume
 import video
@@ -15,6 +16,8 @@ try:
 except ImportError:
     RESAMPLE_METHOD = Image.LANCZOS
 
+cta = ["Which one is the best ?","Which one you like most?","Your Favourite ?","Choose best one ","You Like it","This is Crazy","How is your's",
+       "Can you relate to this ?"]
 
 # ==========================================
 # MODULE: Visual Effects Library
@@ -147,33 +150,74 @@ class VG:
         if img_aspect > target_aspect:
             # Image is wider than target aspect ratio (bounded by width)
             crop_w = orig_w
-            crop_h = int(orig_w / target_aspect)
+            crop_h = round(orig_w / target_aspect)
         else:
             # Image is taller than target aspect ratio (bounded by height)
-            crop_w = int(orig_h * target_aspect)
+            crop_w = round(orig_h * target_aspect)
             crop_h = orig_h
-        # crop_w = orig_w
-        # crop_h = int(crop_w * 16 / 9)
+
+        # 2. ENFORCE EVEN NUMBERS (Crucial for video codecs like H.264/FFmpeg)
+        if crop_w % 2 != 0:
+            crop_w += 1
+        if crop_h % 2 != 0:
+            crop_h += 1
         print(f"Original image size: {orig_w}x{orig_h}. Target crop size: {crop_w}x{crop_h} for ratio {ratio[0]}:{ratio[1]}.")
 
-        # formatted_img = ImageOps.fit(img, (crop_w, crop_h), method=Image.Resampling.LANCZOS)
+        # Formatted_img = ImageOps.fit(img, (crop_w, crop_h), method=Image.Resampling.LANCZOS)
        
-             # Convert the raw un-cropped image into a MoviePy clip
+        # Convert the raw un-cropped image into a MoviePy clip
         img_clip = ImageClip(np.array(img)).with_duration(duration)
         bg_clip = ColorClip(size=(crop_w, crop_h), color=(50, 50, 50)).with_duration(duration)
+        
+        # --- NEW: Add Text Clip at Top Center with Shadow effect (MoviePy v2.0 & Pillow Fixed) ---
+        text_string = random.choice(cta)  # Randomly select a CTA string from the list
+        font_size = int(crop_h * 0.045)  # Scale text size dynamically based on video height
+        top_margin = int(crop_h * 0.06)  # Safe space offset from the absolute top edge
+        
+        # Use a system-standard .ttf font file instead of a descriptive string name
+        # System font fallbacks: Windows ("arial.ttf"), macOS ("Arial.ttf"), Linux ("LiberationSans-Bold.ttf")
+        import platform
+        if platform.system() == "Windows":
+            chosen_font = "arialbd.ttf"  # Arial Bold filename on Windows
+        elif platform.system() == "Darwin":  # macOS
+            chosen_font = "Arial Bold.ttf"
+        else:  # Linux / Cloud servers
+            chosen_font = "DejaVuSans-Bold.ttf" 
 
-        # Center the complete image inside your canvas frame (extra space allowed)
-        centered_img = img_clip.with_position("center")
+        # 1. Create the shadow clip layer (dark color, offset slightly down and right)
+        shadow_clip = (TextClip(
+            font=chosen_font,
+            text=text_string, 
+            font_size=font_size, 
+            color="black", 
+        )
+        .with_duration(duration)
+        .with_opacity(0.4)  # Give the shadow a soft transparent depth
+        .with_position(( "center", top_margin + 4 ))) # Horizontal center, vertical margin + 4px shift
+        
+        # 2. Create the main foreground text layer (vibrant contrasting color)
+        text_clip = (TextClip(
+            font=chosen_font,
+            text=text_string, 
+            font_size=font_size, 
+            color="#FF4500",  # Clean vibrant coral/orange-red text hex color code
+        )
+        .with_duration(duration)
+        .with_position(( "center", top_margin ))) # Center aligned horizontally, anchored at
+
        
         # Create a final composite clip with the required canvas dimensions
-        clip = CompositeVideoClip([bg_clip, centered_img], size=(crop_w, crop_h)).with_duration(duration)
-        
         print(f"Image pre-processed to {crop_w}x{crop_h} for target ratio {ratio[0]}:{ratio[1]}.")
         # 2. Apply Visual Effects
         chosen_effect = effect.lower()
         if chosen_effect in VG.EFFECTS_REGISTRY:
             effect_function = VG.EFFECTS_REGISTRY[chosen_effect]
-            clip = clip.transform(lambda get_frame, t: effect_function(get_frame, t, duration))
+            img_clip = img_clip.transform(lambda get_frame, t: effect_function(get_frame, t, duration))
+        
+        # Center the complete image inside your canvas frame (extra space allowed)
+        centered_img = img_clip.with_position("center")
+       
+        clip = CompositeVideoClip([bg_clip, centered_img,shadow_clip, text_clip], size=(crop_w, crop_h)).with_duration(duration)
         
         # print(f"Applied visual effect: {chosen_effect}.")
         

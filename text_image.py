@@ -35,8 +35,8 @@ class TextOverlayEngine:
             max_text_width = img.width - (padding * 2)
             
             # Wrap both title and content
-            wrapped_title = self._wrap_text(title, font_title, max_text_width, factor=2)
-            wrapped_content = self._wrap_text(content, font_content, max_text_width, factor=1.6)
+            wrapped_title = self._wrap_text(title, font_title, max_text_width, factor=2.5)
+            wrapped_content = self._wrap_text(content, font_content, max_text_width, factor=2)
             
             # Set vertical starting point
             current_y = padding
@@ -45,29 +45,52 @@ class TextOverlayEngine:
             # Draw Title
             for line in wrapped_title:
                 draw.text((img.width/2, current_y), line, font=font_title, 
-                          fill=text_color, anchor="mm")
+                          fill="orange", anchor="mm")
                 current_y += title_size + line_spacing
             
             # Add extra space between title block and content block
-            current_y += 20
+            current_y -= 30
+            # ... (after drawing title)
             
+            # Draw the separator line
+            self._draw_separator(  draw, img.width / 2,  current_y, max_text_width, 
+                color=text_color
+            )
+            
+            current_y += 50 
+            line_no = 0
+            color = text_color
             # Draw Content
             for line in wrapped_content:
+                if line_no%2 == 0:
+                    color = text_color
+                else:
+                    color = "lightgreen"
+
                 draw.text((img.width/2, current_y), line, font=font_content, 
-                          fill=text_color, anchor="mm")
+                          fill=color, anchor="mm")
                 current_y += content_size + line_spacing
+                line_no += 1
             
             # Save the result
             save_path = os.path.join(self.output_folder, output_name)
             img.save(save_path)
             print(f"Image saved successfully at: {save_path}")
     
+    def _draw_separator(self, draw, x_center, y_pos, width, color="black", thickness=7):
+        """Draws a centered horizontal line as a separator."""
+        line_length = width * .8  # Line covers 70% of the text width
+        start_x = x_center - (line_length / 2)
+        end_x = x_center + (line_length / 2)
+        
+        draw.line([(start_x, y_pos), (end_x, y_pos)], fill=color, width=thickness)
+
     def process_json(self, json_file_path, font_path, title_size=50, content_size=30, text_color="black"):
         """Reads a JSON file and generates images for each entry."""
         with open(json_file_path, 'r') as f:
             data = json.load(f)
         count = 0
-        background_image_path = "bg1.jpg"  # Ensure this image exists in the same directory    
+        background_image_path = "bg_black.jpg"  # Ensure this image exists in the same directory    
         for item in data:
             self.create_overlay(
                 image_path=background_image_path,
@@ -91,7 +114,7 @@ if __name__ == "__main__":
         font_path="arial.ttf",
         title_size=70,
         content_size=50,
-        text_color="black"
+        text_color="white"
     )
 # Example Usage:
 # if __name__ == "__main__":
