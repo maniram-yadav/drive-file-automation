@@ -6,6 +6,8 @@ from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 from google.oauth2 import service_account
 from moviepy import ImageClip, AudioFileClip
 import video_mot
+import video
+import video_animal
 
 from pathlib import Path
 
@@ -36,8 +38,9 @@ def find_missing_videos(image_folder_path, video_folder_path):
 def process_media():
 
 
-    missing_videos = find_missing_videos('temp/images/motivational', 'temp/videos/motivational')
+    missing_videos = find_missing_videos('temp/images/motivational_vertical', 'temp/videos/motivational')
     print(f"Missing videos for images: {missing_videos}")
+    print(f"Total missing videos: {len(missing_videos)}")
     # Process each pending image
     for img in missing_videos:
         base_name = os.path.splitext(img)[0]
@@ -46,18 +49,18 @@ def process_media():
         print(f"\nProcessing: {img} -> {video_name}")
         
         local_vid_path = os.path.join("temp", "videos","motivational", video_name)
-        local_img_path = os.path.join("temp", "images","motivational", img)
+        local_img_path = os.path.join("temp", "images","motivational_vertical", img)
 
         print(f"Local video path: {local_vid_path} {img}")
         print("Generating video...")
         try:
-            video_mot.VG.create_video_from_image(
+            video.VG.create_video_from_image(
                 image_path=local_img_path,
                 output_path=local_vid_path,
-                duration=5.0,              # Default duration
+                duration=10.0,              # Default duration
                 music_path='audio.mp3',          # No music by default
                 voice_path='like.mp3',          # No voice by default
-                effect='zoom_out'         # Default effect
+                effect='na'         # Default effect
             )
         
         except Exception as e:

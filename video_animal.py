@@ -136,7 +136,8 @@ class VG:
         ratio: tuple = (9, 16), 
         music_path: str = None, 
         voice_path: str = None,
-        effect: str = 'zoom_out'
+        effect: str = 'zoom_out',
+        show_text: bool = True,
     ) -> str:
         """Generates an mp4 video from an image utilizing pluggable effects and audio mixing."""
         
@@ -155,12 +156,12 @@ class VG:
             # Image is taller than target aspect ratio (bounded by height)
             crop_w = round(orig_h * target_aspect)
             crop_h = orig_h
-
         # 2. ENFORCE EVEN NUMBERS (Crucial for video codecs like H.264/FFmpeg)
         if crop_w % 2 != 0:
             crop_w += 1
         if crop_h % 2 != 0:
             crop_h += 1
+        crop_h += 2    
         print(f"Original image size: {orig_w}x{orig_h}. Target crop size: {crop_w}x{crop_h} for ratio {ratio[0]}:{ratio[1]}.")
 
         # Formatted_img = ImageOps.fit(img, (crop_w, crop_h), method=Image.Resampling.LANCZOS)
@@ -173,7 +174,8 @@ class VG:
         text_string = random.choice(cta)  # Randomly select a CTA string from the list
         font_size = int(crop_h * 0.045)  # Scale text size dynamically based on video height
         top_margin = int(crop_h * 0.06)  # Safe space offset from the absolute top edge
-        
+        if show_text==False:
+            text_string = ' '
         # Use a system-standard .ttf font file instead of a descriptive string name
         # System font fallbacks: Windows ("arial.ttf"), macOS ("Arial.ttf"), Linux ("LiberationSans-Bold.ttf")
         import platform

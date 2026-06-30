@@ -1,7 +1,11 @@
+import datetime
 import os
+import glob
 import textwrap
 from PIL import Image, ImageDraw, ImageFont
 import json
+from datetime import datetime
+
 
 class TextOverlayEngine:
     def __init__(self, output_folder="output"):
@@ -97,9 +101,14 @@ class TextOverlayEngine:
         count = 0
         #   background_image_path = "bg4.jpeg"  # Ensure this image exists in the same directory    
         for item in data:
+            # add formatted date add time second as well with minute with second string in output_name  
+            formatted_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            output_name = f"{image_prefix}_{formatted_date}_{count}_.png"
+            print(f"Generating image: {output_name} for title: {item['title']}")
+
             self.create_overlay(
                 image_path=background_image_path,
-                output_name=f"{image_prefix}{count}.png",
+                output_name=output_name,
                 title=item['title'],
                 content=item['description'],
                 font_path=font_path,
@@ -112,9 +121,11 @@ class TextOverlayEngine:
             count += 1
         print(f"Total images generated: {count}")
 
+
 if __name__ == "__main__":
     
-    file = "posts.json"
+    # Define the folder containing your source files
+    input_folder = "json" 
     
     color = "white"
     image_prefix = "motivational_"
@@ -126,7 +137,6 @@ if __name__ == "__main__":
         "title_font_size": 70,
         "content_font_size": 60,
         "output_folder" : "temp/images/motivational_vertical",
-        "file": "posts.json",
         "color": "white",
         "image_prefix": "motivational_",
         "background_image_path": "bg_black.jpg" ,
@@ -140,29 +150,51 @@ if __name__ == "__main__":
         "title_font_size": 40,
         "content_font_size": 30,
         "output_folder" : "temp/images/motivational",
-        "file": "posts.json",
         "color": "white",
         "image_prefix": "motivational_",
         "background_image_path": "bg4.jpeg" ,
         "padding_top": 70,
         "line_spacing":10
-
     }
 
     # Process the entire batch from JSON
     config = wrap_factor_square
+    # config = wrap_factor_vertical
 
     if not os.path.exists(config["output_folder"]):
         os.makedirs(config["output_folder"])
+        
     engine = TextOverlayEngine(output_folder=config["output_folder"])
 
-    engine.process_json(
-        json_file_path=file,
-        font_path="arial.ttf",
-        background_image_path = config["background_image_path"],
-        image_prefix=config["image_prefix"],
-        title_size=config["title_font_size"],
-        content_size=config["content_font_size"],
-        text_color=config["color"],
-        wrap_factor_square=config
-    )
+    # Find all JSON files in the specified input folder
+    search_path = os.path.join(input_folder, "*.json")
+    file_list = glob.glob(search_path)
+
+    if not file_list:
+        print(f"No JSON files found in {input_folder}")
+
+    # Loop through each file and call the method
+    for file_path in file_list:
+        print(f"Processing file: {file_path}")
+        # if file have no content, skip it
+        with open(file_path, 'r') as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                print(f"Skipping invalid JSON file: {file_path}")
+                continue
+            if not data:
+                print(f"Skipping empty JSON file: {file_path}")
+                continue
+
+        engine.process_json(
+            json_file_path=file_path,  # Now dynamically uses the current file
+            font_path="arial.ttf",
+            background_image_path = config["background_image_path"],
+            image_prefix=config["image_prefix"],
+            title_size=config["title_font_size"],
+            content_size=config["content_font_size"],
+            text_color=config["color"],
+            wrap_factor_square=config
+        )
+        print(f"Finished processing file: {file_path}\n")
