@@ -133,72 +133,65 @@ class VG:
     def create_video_from_image(
         image_path: str, 
         output_path: str, 
-        bg_video_path: str,  # <-- NEW: Added path for background video clip
+        bg_video_path: str,  
         duration: float = 5.0, 
-        ratio: tuple = (9, 16), 
+        ratio: tuple = (9, 16), # Kept for signature compatibility, forced to 576x1024
         music_path: str = None, 
         voice_path: str = None,
         effect: str = 'zoom_out',
         show_text: bool = True,
     ) -> str:
-        """Generates an mp4 video from an image utilizing pluggable effects and audio mixing."""
+        """Generates an mp4 video strictly sized at 576x1024 using pluggable effects and audio."""
         
-        # # 1. Pre-process Image Ratio
+        # 1. FIXED CANVAS DIMENSIONS
+        CROP_W = 576
+        CROP_H = 1024
+        print(f"Enforcing strict target canvas size: {CROP_W}x{CROP_H}")
+
+        # 2. Pre-process Image Resize to fit nicely within the 576x1024 frame
         img = Image.open(image_path)
         orig_w, orig_h = img.size
-        target_aspect = ratio[0] / ratio[1]  # e.g., 9 / 16 = 0.5625
-        img_aspect = orig_w / orig_h
-
-        # Calculate canvas dimensions to fit the image safely
-        if img_aspect > target_aspect:
-            # Image is wider than target aspect ratio (bounded by width)
-            crop_w = orig_w
-            crop_h = round(orig_w / target_aspect)
-        else:
-            # Image is taller than target aspect ratio (bounded by height)
-            crop_w = round(orig_h * target_aspect)
-            crop_h = orig_h
-        # 2. ENFORCE EVEN NUMBERS (Crucial for video codecs like H.264/FFmpeg)
-        if crop_w % 2 != 0:
-            crop_w += 1
-        if crop_h % 2 != 0:
-            crop_h += 1
-        crop_h += 2    
-        print(f"Original image size: {orig_w}x{orig_h}. Target crop size: {crop_w}x{crop_h} for ratio {ratio[0]}:{ratio[1]}.")
-
-        # Formatted_img = ImageOps.fit(img, (crop_w, crop_h), method=Image.Resampling.LANCZOS)
-       
-        # Convert the raw un-cropped image into a MoviePy clip
-        img_clip = ImageClip(np.array(img)).with_duration(duration)
         
-        # --- CHANGED: Load VideoFileClip instead of ColorClip ---
-        # We resize/crop it to fill the target video canvas and match the requested duration
-        bg_clip = (VideoFileClip(bg_video_path)
-                   .resized((crop_w, crop_h))  # Scaled to fit background canvas size
-                   .subclipped(0, duration))   # Cut or looped to match output duration
-       
-        # Example A: Animate position (moving from left to right)
-        # bg_clip = bg_clip.with_position(lambda t: (int(100 * t), 'center'))
+        # Resize image to fit inside 576x1024 while maintaining aspect ratio
+        img_ratio = orig_w / orig_h
+        canvas_ratio = CROP_W / CROP_H
+        
+        if img_ratio > canvas_ratio:
+            # Image is wider: fit to width
+            new_w = CROP_W
+            new_h = round(CROP_W / img_ratio)
+        else:
+            # Image is taller: fit to height
+            new_h = CROP_H
+            new_w = round(CROP_H * img_ratio)
+            
+        # Ensure dimensions are even numbers for FFmpeg
+        if new_w % 2 != 0: new_w += 1
+        if new_h % 2 != 0: new_h += 1
 
-        # Example B: Fade in the background over 1 second
-        # bg_clip = bg_clip.with_effects([fx.FadeIn(1.0)])
-        # --- NEW: Add Text Clip at Top Center with Shadow effect (MoviePy v2.0 & Pillow Fixed) ---
-        text_string = random.choice(cta)  # Randomly select a CTA string from the list
-        font_size = int(crop_h * 0.045)  # Scale text size dynamically based on video height
-        top_margin = int(crop_h * 0.10)  # Safe space offset from the absolute top edge
-        if show_text==False:
-            text_string = ' '
-        # Use a system-standard .ttf font file instead of a descriptive string name
-        # System font fallbacks: Windows ("arial.ttf"), macOS ("Arial.ttf"), Linux ("LiberationSans-Bold.ttf")
+        # Resize image cleanly before converting to MoviePy clip
+        resized_img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        img_clip = ImageClip(np.array(resized_img)).with_duration(duration)
+        
+        # 3. Background Video Layer - Scaled precisely to cover the 576x1024 canvas
+        bg_clip = (VideoFileClip(bg_video_path)
+                   .resized((CROP_W, CROP_H))  
+                   .subclipped(0, duration))   
+       
+        # 4. Text Overlay Configuration
+        text_string = random.choice(cta) if show_text else ' '
+        font_size = int(CROP_H * 0.045)  # Scaled to 1024 height (~46px)
+        top_margin = int(CROP_H * 0.10)  # Offset from top (~102px)
+
         import platform
         if platform.system() == "Windows":
-            chosen_font = "arialbd.ttf"  # Arial Bold filename on Windows
-        elif platform.system() == "Darwin":  # macOS
+            chosen_font = "arialbd.ttf"
+        elif platform.system() == "Darwin":  
             chosen_font = "Arial Bold.ttf"
-        else:  # Linux / Cloud servers
+        else:  
             chosen_font = "DejaVuSans-Bold.ttf" 
 
-        # 1. Create the shadow clip layer (dark color, offset slightly down and right)
+        # Create the text shadow layer
         shadow_clip = (TextClip(
             font=chosen_font,
             text=text_string, 
@@ -206,43 +199,38 @@ class VG:
             color="black", 
         )
         .with_duration(duration)
-        .with_opacity(0.6)  # Give the shadow a soft transparent depth
-        .with_position(( "center", top_margin + 4 ))) # Horizontal center, vertical margin + 4px shift
+        .with_opacity(0.6)  
+        .with_position(("center", top_margin + 4))) 
         
-        # 2. Create the main foreground text layer (vibrant contrasting color)
+        # Create the main text layer
         text_clip = (TextClip(
             font=chosen_font,
             text=text_string, 
             font_size=font_size, 
-            color="#FF4500",  # Clean vibrant coral/orange-red text hex color code
+            color="#FF4500",  
         )
         .with_duration(duration)
-        .with_position(( "center", top_margin ))) # Center aligned horizontally, anchored at
+        .with_position(("center", top_margin))) 
 
-       
-        # Create a final composite clip with the required canvas dimensions
-        print(f"Image pre-processed to {crop_w}x{crop_h} for target ratio {ratio[0]}:{ratio[1]}.")
-        # 2. Apply Visual Effects
+        # 5. Apply Visual Effects to Foreground Image
         chosen_effect = effect.lower()
         if chosen_effect in VG.EFFECTS_REGISTRY:
             effect_function = VG.EFFECTS_REGISTRY[chosen_effect]
             img_clip = img_clip.transform(lambda get_frame, t: effect_function(get_frame, t, duration))
         
-        # Center the complete image inside your canvas frame (extra space allowed)
+        # Center the foreground image on the canvas
         centered_img = img_clip.with_position("center")
        
-        # Include shadow_clip in the layers if you wish to use it
-        clip = CompositeVideoClip([bg_clip, centered_img, shadow_clip ], size=(crop_w, crop_h)).with_duration(duration)
+        # 6. Build Composite Canvas (Size forced to 576x1024)
+        clip = CompositeVideoClip([bg_clip, centered_img, shadow_clip], size=(CROP_W, CROP_H)).with_duration(duration)
         
-        # print(f"Applied visual effect: {chosen_effect}.")
-        
+        # 7. Audio Processing
         merged_audio_path = "temp/music/audio_5sec.mp3"
-
-        print(f"Rendering video to  file: {output_path}")
+        print(f"Rendering video to file: {output_path}")
         merged_audio_clip = AudioFileClip(merged_audio_path)
         clip = clip.with_audio(merged_audio_clip)
 
-        # 4. Render output
+        # 8. Render output
         clip.write_videofile(
             output_path,
             fps=24, 
@@ -251,15 +239,15 @@ class VG:
             logger=None
         )
         
-        # 5. Cleanup
+        # 9. Cleanup
         clip.close()
-        bg_clip.close() # <-- NEW: Ensure the background video resource is released
+        bg_clip.close() 
         merged_audio_clip.close()
-        
         img.close()
+        resized_img.close()
+        
         return output_path
 
-    
     @staticmethod
     def merge_audio_video(video_path: str, audio_path: str, output_path: str, target_duration: float):
         """
