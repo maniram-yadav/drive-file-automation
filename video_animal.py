@@ -56,7 +56,7 @@ class VideoEffects:
         
         # Starts at 1.10, scales down to 1.0. 
         # The max() clamp ensures we never shrink below the canvas size and get black borders.
-        zoom_factor = max(1.0, 2.1 - 1.10 * (t / duration))
+        zoom_factor = max(1.0, 1.5 - .50 * (t / duration))
         
         new_w = math.ceil(base_w * zoom_factor)
         new_h = math.ceil(base_h * zoom_factor)
@@ -202,11 +202,11 @@ class VG:
         shadow_clip = (TextClip(
             font=chosen_font,
             text=text_string, 
-            font_size=font_size, 
+            font_size=font_size+2, 
             color="black", 
         )
         .with_duration(duration)
-        .with_opacity(0.4)  # Give the shadow a soft transparent depth
+        .with_opacity(0.6)  # Give the shadow a soft transparent depth
         .with_position(( "center", top_margin + 4 ))) # Horizontal center, vertical margin + 4px shift
         
         # 2. Create the main foreground text layer (vibrant contrasting color)
@@ -232,7 +232,7 @@ class VG:
         centered_img = img_clip.with_position("center")
        
         # Include shadow_clip in the layers if you wish to use it
-        clip = CompositeVideoClip([bg_clip, centered_img, shadow_clip, text_clip], size=(crop_w, crop_h)).with_duration(duration)
+        clip = CompositeVideoClip([bg_clip, centered_img, text_clip ], size=(crop_w, crop_h)).with_duration(duration)
         
         # print(f"Applied visual effect: {chosen_effect}.")
         
