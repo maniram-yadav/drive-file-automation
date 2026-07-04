@@ -118,6 +118,7 @@ def process_media(service_account_file, image_folder_id, video_folder_id):
                 duration=5.0,              # Default duration
                 music_path='audio.mp3',          # No music by default
                 voice_path='like.mp3',          # No voice by default
+                bg_video_path='temp/videos/background.mp4',
                 effect='zoom_out'         # Default effect
             )
         

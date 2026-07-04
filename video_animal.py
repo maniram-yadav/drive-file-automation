@@ -4,6 +4,7 @@ import random
 from typing import Callable, Dict
 import numpy as np
 from PIL import Image, ImageOps
+import moviepy.video.fx as fx
 
 # MoviePy v2.0+ Imports
 from moviepy import ColorClip, CompositeVideoClip, ImageClip, AudioFileClip, CompositeAudioClip, TextClip,VideoFileClip
@@ -55,7 +56,7 @@ class VideoEffects:
         
         # Starts at 1.10, scales down to 1.0. 
         # The max() clamp ensures we never shrink below the canvas size and get black borders.
-        zoom_factor = max(1.0, 1.30 - 0.30 * (t / duration))
+        zoom_factor = max(1.0, 2.1 - 1.10 * (t / duration))
         
         new_w = math.ceil(base_w * zoom_factor)
         new_h = math.ceil(base_h * zoom_factor)
@@ -132,6 +133,7 @@ class VG:
     def create_video_from_image(
         image_path: str, 
         output_path: str, 
+        bg_video_path: str,  # <-- NEW: Added path for background video clip
         duration: float = 5.0, 
         ratio: tuple = (9, 16), 
         music_path: str = None, 
@@ -168,8 +170,18 @@ class VG:
        
         # Convert the raw un-cropped image into a MoviePy clip
         img_clip = ImageClip(np.array(img)).with_duration(duration)
-        bg_clip = ColorClip(size=(crop_w, crop_h), color=(50, 50, 50)).with_duration(duration)
         
+        # --- CHANGED: Load VideoFileClip instead of ColorClip ---
+        # We resize/crop it to fill the target video canvas and match the requested duration
+        bg_clip = (VideoFileClip(bg_video_path)
+                   .resized((crop_w, crop_h))  # Scaled to fit background canvas size
+                   .subclipped(0, duration))   # Cut or looped to match output duration
+       
+        # Example A: Animate position (moving from left to right)
+        # bg_clip = bg_clip.with_position(lambda t: (int(100 * t), 'center'))
+
+        # Example B: Fade in the background over 1 second
+        bg_clip = bg_clip.with_effects([fx.FadeIn(1.0)])
         # --- NEW: Add Text Clip at Top Center with Shadow effect (MoviePy v2.0 & Pillow Fixed) ---
         text_string = random.choice(cta)  # Randomly select a CTA string from the list
         font_size = int(crop_h * 0.045)  # Scale text size dynamically based on video height
@@ -219,7 +231,8 @@ class VG:
         # Center the complete image inside your canvas frame (extra space allowed)
         centered_img = img_clip.with_position("center")
        
-        clip = CompositeVideoClip([bg_clip, centered_img,shadow_clip, text_clip], size=(crop_w, crop_h)).with_duration(duration)
+        # Include shadow_clip in the layers if you wish to use it
+        clip = CompositeVideoClip([bg_clip, centered_img, shadow_clip, text_clip], size=(crop_w, crop_h)).with_duration(duration)
         
         # print(f"Applied visual effect: {chosen_effect}.")
         
@@ -240,13 +253,12 @@ class VG:
         
         # 5. Cleanup
         clip.close()
+        bg_clip.close() # <-- NEW: Ensure the background video resource is released
         merged_audio_clip.close()
         
-        
         img.close()
-        # video.VG.merge_audio_video(video_path=output_path_with_suffix, audio_path=music_path, output_path=output_path, target_duration=duration)
         return output_path
-    
+
     
     @staticmethod
     def merge_audio_video(video_path: str, audio_path: str, output_path: str, target_duration: float):
