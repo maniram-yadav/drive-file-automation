@@ -140,7 +140,7 @@ if __name__ == "__main__":
         "color": "white",
         "image_prefix": "motivational_",
         "background_image_path": "bg_black.jpg" ,
-        "padding_top": 180,
+        "padding_top": 200,
         "line_spacing":20
     }      
     wrap_factor_square  = {
@@ -158,8 +158,8 @@ if __name__ == "__main__":
     }
 
     # Process the entire batch from JSON
-    config = wrap_factor_square
-    # config = wrap_factor_vertical
+    # config = wrap_factor_square
+    config = wrap_factor_vertical
 
     if not os.path.exists(config["output_folder"]):
         os.makedirs(config["output_folder"])

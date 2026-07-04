@@ -107,7 +107,7 @@ def process_media(service_account_file, image_folder_id, video_folder_id):
         
         # 1. Download Image
         local_img_path = drive.download_file(img['id'], img['name'])
-        local_vid_path = os.path.join("temp", "videos", video_name)
+        local_vid_path = os.path.join("temp", "videos","animal", video_name)
         
         # 2. Generate Video
         print("Generating video...")
@@ -150,8 +150,8 @@ if __name__ == "__main__":
     # Ensure a local temp directory exists
     if not os.path.exists("temp"):
         os.makedirs("temp")
-        os.makedirs("temp/images")
-        os.makedirs("temp/videos")
+        os.makedirs("temp/images/animal")
+        os.makedirs("temp/videos/animal")
         os.makedirs("temp/music")
         
     process_media(
